@@ -1,22 +1,20 @@
-//package playground.service;
-//
-//import java.util.List;
-//
-//import org.springframework.http.ResponseEntity;
-//
-//import playground.entity.Order;
-//import playground.response.OrderResponse;
-//
-//public interface OrderService {
-//	
-//	ResponseEntity<?> getOrderById(int id);
-//	
-//	ResponseEntity<?> createOrder(Order order);
+package playground.service;
+
+import java.util.Map;
+
+import playground.requests.OrderRequest;
+import playground.response.models.OrderResponse;
+
+public interface OrderService {
+	
+	Map<String, OrderResponse> getOrderById(int id);
+	
+	Map<String, OrderResponse> createOrder(OrderRequest order);
 //	
 //	void deleteOrderById(int id);
 //	
 //	Order updateOrderByOrderId(int id);
 //	
 //	List<OrderResponse> getAllOrders();
-//
-//}
+
+}
