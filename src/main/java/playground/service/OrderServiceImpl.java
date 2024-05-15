@@ -10,11 +10,16 @@ import org.springframework.stereotype.Service;
 import playground.entity.Customer;
 import playground.entity.Employee;
 import playground.entity.Order;
+import playground.entity.OrderDetail;
+import playground.entity.Product;
 import playground.entity.Shipping;
 import playground.repository.CustomerRepository;
 import playground.repository.EmployeeRepository;
+import playground.repository.OrderDetailRepository;
 import playground.repository.OrderRepository;
+import playground.repository.ProductRepository;
 import playground.repository.ShippingRepository;
+import playground.requests.OrderDetailRequest;
 import playground.requests.OrderRequest;
 import playground.response.models.OrderResponse;
 
@@ -28,15 +33,21 @@ public class OrderServiceImpl implements OrderService {
 	private final CustomerRepository customerRepository;
 	
 	private final ShippingRepository shippingRepository;
+	
+	private final OrderDetailRepository orderDetailRepository;
+	
+	private final ProductRepository productRepository;
 
 	
 	private Map<String, OrderResponse> responseMap;
 
-	public OrderServiceImpl(OrderRepository orderRepository, EmployeeRepository employeeRepository, CustomerRepository customerRepository, ShippingRepository shippingRepository) {
+	public OrderServiceImpl(ProductRepository productRepository, OrderDetailRepository orderDetailRepository, OrderRepository orderRepository, EmployeeRepository employeeRepository, CustomerRepository customerRepository, ShippingRepository shippingRepository) {
 		this.orderRepository = orderRepository;
 		this.employeeRepository = employeeRepository;
 		this.shippingRepository = shippingRepository;
 		this.customerRepository = customerRepository;
+		this.orderDetailRepository = orderDetailRepository;
+		this.productRepository = productRepository;
 	}
 
 	@Override
@@ -58,31 +69,67 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	@Override
-	public Map<String, OrderResponse>createOrder(OrderRequest orderRequest) {
+	public Map<String, String>createOrder(OrderRequest orderRequest) {
+		
+		Map<String, String> response = new HashMap<String, String>();
 		
 		Optional<Customer> customer = customerRepository.findById(orderRequest.getCustomerId());
 		Optional<Employee> employee = employeeRepository.findById(orderRequest.getEmployeeId());
 		Optional<Shipping> shipping = shippingRepository.findById(orderRequest.getShipperId());
-		responseMap = new HashMap<>();
-
 
 		if ((customer.isPresent()) && (employee.isPresent()) && (shipping.isPresent())) {
 			
 			Order savedOrder = orderRepository.save(getOrderFromRequest(orderRequest, customer.get(), employee.get(), shipping.get()));
+//			orderRequest.getOrderDetailRequest().forEach(x -> {
+//				Optional<Product> product = productRepository.findById(x.getProductId());
+//				
+//				// TODO: Get the product by the IDs and save each product against the OrderDetail.
+//				OrderDetail detail = new OrderDetail();
+//				detail.setOrder(savedOrder);
+//				detail.setProduct(product.get());
+//				detail.setQuantity(Integer.parseInt(x.getQuantity()));
+//				orderDetailRepository.save(detail);
+//			});
+			
 			OrderResponse orderResponse = buildOrderResponseFromOrder(savedOrder);
-			responseMap.put("Success!", orderResponse);
-			return responseMap;
+			response.put("orderId", orderResponse.getOrderID());
+			return response;
 		}
 		
-		responseMap.put("Failed to create Order.", new OrderResponse());
-		return responseMap;
-		
-
+		response.put("Failed to create Order.", "");
+		return response;
 	}
+	
+	@Override
+	public Map<String, String> createOrderDetailsForOrder(OrderDetailRequest orderRequest) {
+        Map<String, String> responseMap = new HashMap<>();
+
+        orderRequest.getDetailRequestlist().forEach(orderDetailRequest -> {
+            Optional<Product> productOptional = productRepository.findById(orderDetailRequest.getProductId());
+            Optional<Order> orderOptional = orderRepository.findById(orderDetailRequest.getOrderId());
+
+            if (productOptional.isPresent() && orderOptional.isPresent()) {
+                Product product = productOptional.get();
+                Order order = orderOptional.get();
+
+                OrderDetail orderDetail = new OrderDetail();
+                orderDetail.setOrder(order);
+                orderDetail.setProduct(product);
+                orderDetail.setQuantity(Integer.parseInt(orderDetailRequest.getQuantity()));
+                OrderDetail savedOrderDetail = orderDetailRepository.save(orderDetail);
+
+                responseMap.put("orderDetailId", String.valueOf(savedOrderDetail.getOrderDetailID()));
+                responseMap.put("orderId", String.valueOf(savedOrderDetail.getOrder().getOrderID()));
+            } else {
+                responseMap.put("error", "Product or Order not found.");
+            }
+        });
+        return responseMap;
+    }
 
 	private OrderResponse buildOrderResponseFromOrder(Order savedOrder) {
 		OrderResponse orderResponse = new OrderResponse();
-		orderResponse.setOrderID(savedOrder.getOrderID());
+		orderResponse.setOrderID(String.valueOf(savedOrder.getOrderID()));
 		orderResponse.setCustomer(savedOrder.getCustomer());
 		orderResponse.setEmployee(savedOrder.getEmployee());
 		orderResponse.setShipper(savedOrder.getShipper());
@@ -144,9 +191,10 @@ public class OrderServiceImpl implements OrderService {
 	    orderResponse.setCustomer(order.getCustomer());
 	    orderResponse.setEmployee(order.getEmployee());
 	    orderResponse.setOrderDate(order.getOrderDate());
-	    orderResponse.setOrderID(order.getOrderID());
+	    orderResponse.setOrderID(String.valueOf(order.getOrderID()));
 	    orderResponse.setShipper(order.getShipper());
 	    return orderResponse;
 	}
+
 
 }

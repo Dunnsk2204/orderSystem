@@ -8,7 +8,7 @@ import playground.entity.Shipping;
 
 public class OrderResponse {
 	
-	private int orderID;
+	private String orderID;
 
 	private Customer customer;
 
@@ -18,11 +18,11 @@ public class OrderResponse {
 
 	private Shipping shipper;
 
-	public int getOrderID() {
+	public String getOrderID() {
 		return orderID;
 	}
 
-	public void setOrderID(int orderID) {
+	public void setOrderID(String orderID) {
 		this.orderID = orderID;
 	}
 

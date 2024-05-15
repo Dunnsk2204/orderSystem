@@ -1,6 +1,7 @@
 package playground.requests;
 
 import java.util.Date;
+import java.util.List;
 
 public class OrderRequest {
 	
@@ -13,6 +14,8 @@ public class OrderRequest {
 	private Date orderDate;
 
 	private String shipperId;
+	
+	List<OrderDetailRequest> orderDetail;
 
 	public String getCustomerId() {
 		return customerId;
@@ -44,6 +47,14 @@ public class OrderRequest {
 
 	public void setShipperId(String shipperId) {
 		this.shipperId = shipperId;
+	}
+
+	public List<OrderDetailRequest> getOrderDetailRequest() {
+		return orderDetail;
+	}
+
+	public void setOrderDetailRequest(List<OrderDetailRequest> orderDetail) {
+		this.orderDetail = orderDetail;
 	}
 
 }
