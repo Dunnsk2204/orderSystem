@@ -1,6 +1,7 @@
 package playground.service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -29,19 +30,20 @@ public class OrderServiceImpl implements OrderService {
 	private final OrderRepository orderRepository;
 
 	private final EmployeeRepository employeeRepository;
-	
+
 	private final CustomerRepository customerRepository;
-	
+
 	private final ShippingRepository shippingRepository;
-	
+
 	private final OrderDetailRepository orderDetailRepository;
-	
+
 	private final ProductRepository productRepository;
 
-	
 	private Map<String, OrderResponse> responseMap;
 
-	public OrderServiceImpl(ProductRepository productRepository, OrderDetailRepository orderDetailRepository, OrderRepository orderRepository, EmployeeRepository employeeRepository, CustomerRepository customerRepository, ShippingRepository shippingRepository) {
+	public OrderServiceImpl(ProductRepository productRepository, OrderDetailRepository orderDetailRepository,
+			OrderRepository orderRepository, EmployeeRepository employeeRepository,
+			CustomerRepository customerRepository, ShippingRepository shippingRepository) {
 		this.orderRepository = orderRepository;
 		this.employeeRepository = employeeRepository;
 		this.shippingRepository = shippingRepository;
@@ -55,77 +57,99 @@ public class OrderServiceImpl implements OrderService {
 		Optional<Order> order = orderRepository.findById(Integer.toString(id));
 		responseMap = new HashMap<>();
 
-
 		if (!order.isPresent()) {
 			responseMap.put("No order is available with the ID " + id, new OrderResponse());
 			return responseMap;
 		}
-		
+
 		OrderResponse orderResponse = createOrderResponse(order.get());
 		responseMap.put(HttpStatus.OK.getReasonPhrase(), orderResponse);
-		
 
 		return responseMap;
 	}
 
 	@Override
-	public Map<String, String>createOrder(OrderRequest orderRequest) {
-		
+	public Map<String, String> createOrder(OrderRequest orderRequest) {
+
 		Map<String, String> response = new HashMap<String, String>();
-		
+
 		Optional<Customer> customer = customerRepository.findById(orderRequest.getCustomerId());
 		Optional<Employee> employee = employeeRepository.findById(orderRequest.getEmployeeId());
 		Optional<Shipping> shipping = shippingRepository.findById(orderRequest.getShipperId());
 
 		if ((customer.isPresent()) && (employee.isPresent()) && (shipping.isPresent())) {
-			
-			Order savedOrder = orderRepository.save(getOrderFromRequest(orderRequest, customer.get(), employee.get(), shipping.get()));
-//			orderRequest.getOrderDetailRequest().forEach(x -> {
-//				Optional<Product> product = productRepository.findById(x.getProductId());
-//				
-//				// TODO: Get the product by the IDs and save each product against the OrderDetail.
-//				OrderDetail detail = new OrderDetail();
-//				detail.setOrder(savedOrder);
-//				detail.setProduct(product.get());
-//				detail.setQuantity(Integer.parseInt(x.getQuantity()));
-//				orderDetailRepository.save(detail);
-//			});
-			
+
+			Order savedOrder = orderRepository
+					.save(getOrderFromRequest(orderRequest, customer.get(), employee.get(), shipping.get()));
 			OrderResponse orderResponse = buildOrderResponseFromOrder(savedOrder);
+
 			response.put("orderId", orderResponse.getOrderID());
 			return response;
 		}
-		
+
 		response.put("Failed to create Order.", "");
 		return response;
 	}
-	
+
 	@Override
 	public Map<String, String> createOrderDetailsForOrder(OrderDetailRequest orderRequest) {
-        Map<String, String> responseMap = new HashMap<>();
+		Map<String, String> responseMap = new HashMap<>();
 
-        orderRequest.getDetailRequestlist().forEach(orderDetailRequest -> {
-            Optional<Product> productOptional = productRepository.findById(orderDetailRequest.getProductId());
-            Optional<Order> orderOptional = orderRepository.findById(orderDetailRequest.getOrderId());
+		orderRequest.getDetailRequestlist().forEach(orderDetailRequest -> {
+			Optional<Product> productOptional = productRepository.findById(orderDetailRequest.getProductId());
+			Optional<Order> orderOptional = orderRepository.findById(orderDetailRequest.getOrderId());
 
-            if (productOptional.isPresent() && orderOptional.isPresent()) {
-                Product product = productOptional.get();
-                Order order = orderOptional.get();
+			if (productOptional.isPresent() && orderOptional.isPresent()) {
+				Product product = productOptional.get();
+				Order order = orderOptional.get();
+				OrderDetail savedOrderDetail = saveOrderDetail(order, product, orderDetailRequest.getQuantity());
 
-                OrderDetail orderDetail = new OrderDetail();
-                orderDetail.setOrder(order);
-                orderDetail.setProduct(product);
-                orderDetail.setQuantity(Integer.parseInt(orderDetailRequest.getQuantity()));
-                OrderDetail savedOrderDetail = orderDetailRepository.save(orderDetail);
+				responseMap.put("orderDetailId", String.valueOf(savedOrderDetail.getOrderDetailID()));
+				responseMap.put("orderId", String.valueOf(savedOrderDetail.getOrder().getOrderID()));
+			} else {
+				responseMap.put("error", "Product or Order not found.");
+			}
+		});
+		return responseMap;
+	}
 
-                responseMap.put("orderDetailId", String.valueOf(savedOrderDetail.getOrderDetailID()));
-                responseMap.put("orderId", String.valueOf(savedOrderDetail.getOrder().getOrderID()));
-            } else {
-                responseMap.put("error", "Product or Order not found.");
-            }
-        });
-        return responseMap;
-    }
+	@Override
+	public Map<String, String> deleteOrderById(String id) {
+		Map<String, String> responseMap = new HashMap<>();
+		Optional<Order> order = orderRepository.findById(id);
+		
+		if (order.isEmpty()) {
+			responseMap.put("ERROR", "No order exists with the orderId");
+		}
+		
+		List<OrderDetail> details = orderDetailRepository.findAll().stream().filter(x -> x.getOrder().getOrderID() == order.get().getOrderID()).toList();
+		orderDetailRepository.deleteAll(details);
+		orderRepository.delete(order.get());
+		
+		responseMap.put("Deleted Order:", String.valueOf(order.get().getOrderID()));
+		return responseMap;
+	}
+	
+
+	@Override
+	public Order updateOrderByOrderId(int id) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<OrderResponse> getAllOrders() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	private OrderDetail saveOrderDetail(Order order, Product product, String quantity) {
+		OrderDetail orderDetail = new OrderDetail();
+		orderDetail.setOrder(order);
+		orderDetail.setProduct(product);
+		orderDetail.setQuantity(Integer.parseInt(quantity));
+		return orderDetailRepository.save(orderDetail);
+	}
 
 	private OrderResponse buildOrderResponseFromOrder(Order savedOrder) {
 		OrderResponse orderResponse = new OrderResponse();
@@ -137,7 +161,8 @@ public class OrderServiceImpl implements OrderService {
 		return orderResponse;
 	}
 
-	private Order getOrderFromRequest(OrderRequest orderRequest, Customer customer, Employee employee, Shipping shipping) {
+	private Order getOrderFromRequest(OrderRequest orderRequest, Customer customer, Employee employee,
+			Shipping shipping) {
 		Order order = new Order();
 		order.setCustomer(customer);
 		order.setEmployee(employee);
@@ -184,17 +209,15 @@ public class OrderServiceImpl implements OrderService {
 //		}
 //		return true;
 //	}
-	
-	
-	private OrderResponse createOrderResponse(Order order) {
-	    OrderResponse orderResponse = new OrderResponse();
-	    orderResponse.setCustomer(order.getCustomer());
-	    orderResponse.setEmployee(order.getEmployee());
-	    orderResponse.setOrderDate(order.getOrderDate());
-	    orderResponse.setOrderID(String.valueOf(order.getOrderID()));
-	    orderResponse.setShipper(order.getShipper());
-	    return orderResponse;
-	}
 
+	private OrderResponse createOrderResponse(Order order) {
+		OrderResponse orderResponse = new OrderResponse();
+		orderResponse.setCustomer(order.getCustomer());
+		orderResponse.setEmployee(order.getEmployee());
+		orderResponse.setOrderDate(order.getOrderDate());
+		orderResponse.setOrderID(String.valueOf(order.getOrderID()));
+		orderResponse.setShipper(order.getShipper());
+		return orderResponse;
+	}
 
 }

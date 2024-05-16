@@ -2,6 +2,7 @@ package playground.controller;
 
 import java.util.Map;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -42,6 +43,11 @@ public class OrderController {
 	@PostMapping("/addOrderDetailsToOrder")
 	Map<String,String> addOrderDetails(@RequestBody OrderDetailRequest request) {
 		return orderService.createOrderDetailsForOrder(request);
+	}
+	
+	@DeleteMapping("/deleteOrder/{id}")
+	Map<String,String> deleteOrderById(@PathVariable String id) {
+		return orderService.deleteOrderById(id);
 	}
 
 }
