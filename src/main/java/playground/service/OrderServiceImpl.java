@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,7 +23,9 @@ import playground.repository.ProductRepository;
 import playground.repository.ShippingRepository;
 import playground.requests.OrderDetailRequest;
 import playground.requests.OrderRequest;
+import playground.response.models.OrderProductResponse;
 import playground.response.models.OrderResponse;
+import playground.response.models.ProductResponse;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -117,28 +120,69 @@ public class OrderServiceImpl implements OrderService {
 	public Map<String, String> deleteOrderById(String id) {
 		Map<String, String> responseMap = new HashMap<>();
 		Optional<Order> order = orderRepository.findById(id);
-		
+
 		if (order.isEmpty()) {
 			responseMap.put("ERROR", "No order exists with the orderId");
 		}
-		
-		List<OrderDetail> details = orderDetailRepository.findAll().stream().filter(x -> x.getOrder().getOrderID() == order.get().getOrderID()).toList();
+
+		List<OrderDetail> details = orderDetailRepository.findAll().stream()
+				.filter(x -> x.getOrder().getOrderID() == order.get().getOrderID()).toList();
 		orderDetailRepository.deleteAll(details);
 		orderRepository.delete(order.get());
-		
+
 		responseMap.put("Deleted Order:", String.valueOf(order.get().getOrderID()));
 		return responseMap;
-	}
-	
-
-	@Override
-	public Order updateOrderByOrderId(int id) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	@Override
 	public List<OrderResponse> getAllOrders() {
+
+		List<Order> orderList = orderRepository.findAll();
+
+		List<OrderResponse> orderResponseList = orderList.stream().map(order -> {
+			OrderResponse orderResponse = new OrderResponse();
+			orderResponse.setOrderDate(order.getOrderDate());
+			orderResponse.setOrderID(String.valueOf(order.getOrderID()));
+			orderResponse.setCustomer(order.getCustomer());
+			orderResponse.setShipper(order.getShipper());
+			orderResponse.setEmployee(order.getEmployee());
+			return orderResponse;
+		}).collect(Collectors.toList());
+
+		return orderResponseList;
+	}
+
+	@Override
+	public List<OrderProductResponse> getAllOrdersWithProducts() {
+		List<Order> orderList = orderRepository.findAll();
+
+		List<OrderProductResponse> orderProducts = orderList.stream().map(order -> {
+
+			List<OrderDetail> orderDetails = orderDetailRepository.findAllByOrderID(String.valueOf(order.getOrderID()));
+
+			List<ProductResponse> products = orderDetails.stream()
+					.map(detail -> new ProductResponse(detail.getProduct().getProductID(),
+							detail.getProduct().getProductName(), detail.getProduct().getSupplier(),
+							String.valueOf(detail.getProduct().getPrice()), detail.getProduct().getCategory(),
+							detail.getProduct().getUnit()))
+					.collect(Collectors.toList());
+
+			OrderProductResponse orderResponse = new OrderProductResponse();
+			orderResponse.setOrderDate(order.getOrderDate());
+			orderResponse.setOrderID(String.valueOf(order.getOrderID()));
+			orderResponse.setCustomer(order.getCustomer());
+			orderResponse.setShipper(order.getShipper());
+//			orderResponse.setEmployee(order.getEmployee());
+			orderResponse.setProducts(products);
+			return orderResponse;
+		}).collect(Collectors.toList());
+
+		return orderProducts;
+
+	}
+
+	@Override
+	public Order updateOrderByOrderId(int id) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -170,45 +214,6 @@ public class OrderServiceImpl implements OrderService {
 		order.setShipper(shipping);
 		return order;
 	}
-
-//	@Override
-//	public void deleteOrderById(int id) {
-//		// TODO Auto-generated method stub
-//
-//	}
-
-//	@Override
-//	public Order updateOrderByOrderId(int id) {
-//		// TODO Auto-generated method stub
-//		return null;
-//	}
-//
-//	@Override
-//	public List<OrderResponse> getAllOrders() {
-//
-//		List<Order> orderList = orderRepository.findAll();
-//
-//		List<OrderResponse> orderResponseList = orderList.stream().map(order -> {
-//			OrderResponse orderResponse = new OrderResponse();
-//			orderResponse.setOrderDate(order.getOrderDate());
-//			orderResponse.setOrderId(order.getOrderId());
-//			orderResponse.setTotalAmount(order.getTotalAmount());
-//			orderResponse.setUser(order.getUser());
-//			return orderResponse;
-//		}).collect(Collectors.toList());
-//
-//		return orderResponseList;
-//	}
-//	
-//	
-//	private boolean checkProductsExist(List<Product> orderProductList, Set<Integer> allProductsList) {
-//		for (Product productOrder : orderProductList) {
-//			if (!allProductsList.contains(productOrder.getProductId())) {
-//				return false;
-//			}
-//		}
-//		return true;
-//	}
 
 	private OrderResponse createOrderResponse(Order order) {
 		OrderResponse orderResponse = new OrderResponse();

@@ -1,5 +1,6 @@
 package playground.controller;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import playground.requests.OrderDetailRequest;
 import playground.requests.OrderRequest;
+import playground.response.models.OrderProductResponse;
 import playground.response.models.OrderResponse;
 import playground.service.OrderService;
 
@@ -30,10 +32,15 @@ public class OrderController {
 		return orderService.getOrderById(Integer.valueOf(id));
 	}
 	
-//	@GetMapping("/getAllOrders")
-//	List<OrderResponse> getOrders() {
-//		return orderService.getAllOrders();
-//	}
+	@GetMapping("/getAllOrders")
+	List<OrderResponse> getOrders() {
+		return orderService.getAllOrders();
+	}
+	
+	@GetMapping("/getProductsOnOrder")
+	List<OrderProductResponse> getProductOrders() {
+		return orderService.getAllOrdersWithProducts();
+	}
 	
 	@PostMapping("/createOrder")
 	Map<String, String> createOrders(@RequestBody OrderRequest order) {

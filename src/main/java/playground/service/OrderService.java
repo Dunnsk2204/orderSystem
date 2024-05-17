@@ -6,6 +6,7 @@ import java.util.Map;
 import playground.entity.Order;
 import playground.requests.OrderDetailRequest;
 import playground.requests.OrderRequest;
+import playground.response.models.OrderProductResponse;
 import playground.response.models.OrderResponse;
 
 public interface OrderService {
@@ -21,5 +22,7 @@ public interface OrderService {
 	Order updateOrderByOrderId(int id);
 	
 	List<OrderResponse> getAllOrders();
+	
+	List<OrderProductResponse> getAllOrdersWithProducts();
 
 }
