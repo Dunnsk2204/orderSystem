@@ -25,7 +25,7 @@ public class ProductController {
 		this.productService = productService;
 	}
 
-	@GetMapping
+	@GetMapping("/allProducts")
 	List<ProductResponse> allProducts() {
 		return this.productService.getAllProducts();
 	}
@@ -39,6 +39,11 @@ public class ProductController {
 	Map<String, ProductResponse> postUser(@RequestBody ProductRequest product) {
 		Map<String,ProductResponse> response = productService.saveProduct(product);
 		return response;
+	}
+	
+	@GetMapping("/productsByCategory/{categoryId}")
+	List<ProductResponse> getProductsByCategoryId(@PathVariable String categoryId) {
+		return this.productService.getAllProductsByCategoryId(Integer.valueOf(categoryId));
 	}
 
 	

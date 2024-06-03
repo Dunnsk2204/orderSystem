@@ -19,7 +19,6 @@ import playground.repository.SupplierRepository;
 import playground.requests.ProductRequest;
 import playground.response.Response;
 import playground.response.models.ProductResponse;
-import playground.utils.ResponseObjectMapper;
 
 @Service
 public class ProductServiceImpl implements ProductService {
@@ -38,95 +37,83 @@ public class ProductServiceImpl implements ProductService {
 	@Override
 	public List<ProductResponse> getAllProducts() {
 		List<Product> productList = productRepository.findAll();
-
-		List<ProductResponse> responseList = productList.stream().map(product -> {
-			ProductResponse productResponse = new ProductResponse();
-			productResponse.setProductId(product.getProductID());
-			productResponse.setName(product.getProductName());
-			productResponse.setPrice(product.getPrice().toEngineeringString());
-			productResponse.setSupplier(product.getSupplier());
-			productResponse.setCategory(product.getCategory());
-			productResponse.setUnit(product.getUnit());
-			return productResponse;
-		}).collect(Collectors.toList());
-
-		return responseList;
+		return productList.stream().map(this::mapProductToResponse).collect(Collectors.toList());
 	}
 
 	@Override
 	public ResponseEntity<?> getProductById(int id) {
-
 		Optional<Product> optionalProduct = productRepository.findById(Integer.toString(id));
 
-		if (!optionalProduct.isEmpty()) {
-
-			ProductResponse productResponse = ResponseObjectMapper.map(optionalProduct.get(), product -> {
-				ProductResponse response = new ProductResponse();
-				response.setProductId(product.getProductID());
-				response.setName(product.getProductName());
-				response.setPrice(product.getPrice().toEngineeringString());
-				response.setSupplier(product.getSupplier());
-				response.setCategory(product.getCategory());
-				response.setUnit(product.getUnit());
-				return response;
-			});
-
+		if (optionalProduct.isPresent()) {
+			ProductResponse productResponse = mapProductToResponse(optionalProduct.get());
 			return ResponseEntity.ok(productResponse);
 		}
 
 		Response errorResponse = new Response("Product has not been found", HttpStatus.NOT_FOUND.value());
 		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-
 	}
 
 	@Override
 	public Map<String, ProductResponse> saveProduct(ProductRequest productRequest) {
+
+		Optional<Category> categoryOptional = categoryRepository.findById(productRequest.getCategoryId());
+		Optional<Supplier> supplierOptional = supplierRepository.findById(productRequest.getSupplierId());
+		Map<String, ProductResponse> response = new HashMap<>();
+
+		if (categoryOptional.isEmpty() || supplierOptional.isEmpty()) {
+			response.put("Error, no supplier or category with the IDs received.", new ProductResponse());
+			return response;
+		}
+
+		if ((productRequest.getProductName().isBlank()) || (productRequest.getProductName().isEmpty())
+				|| productRequest.getProductName() == null) {
+			response.put("Error, Product must have a name.", new ProductResponse());
+			return response;
+		}
+
+		Product product = createProductFromRequest(productRequest, categoryOptional.get(), supplierOptional.get());
+		Product savedProduct = productRepository.save(product);
+
+		Map<String, ProductResponse> returnResponse = new HashMap<>();
+		returnResponse.put("Success", mapProductToResponse(savedProduct));
+		return returnResponse;
+	}
+
+	@Override
+	public List<ProductResponse> getAllProductsByCategoryId(int categoryId) {
+		List<Product> productList = productRepository.findAll().stream()
+				.filter(x -> x.getCategory().getCategoryID() == categoryId).collect(Collectors.toList());
 		
-	    Optional<Category> categoryOptional = categoryRepository.findById(productRequest.getCategoryId());
-	    Optional<Supplier> supplierOptional = supplierRepository.findById(productRequest.getSupplierId());
-
-	    if (categoryOptional.isEmpty() || supplierOptional.isEmpty()) {
-	        Map<String, ProductResponse> response = new HashMap<>();
-	        response.put("Error, no supplier or category with the IDs received.", new ProductResponse());
-	        return response;
-	    }
-
-	    Product product = createProductFromRequest(productRequest, categoryOptional.get(), supplierOptional.get());
-	    Product savedProduct = productRepository.save(product);
-
-	    Map<String, ProductResponse> returnResponse = new HashMap<>();
-	    returnResponse.put("Success", mapProductToResponse(savedProduct));
-	    return returnResponse;
+		return productList.stream().map(this::mapProductToResponse).collect(Collectors.toList());
 	}
 
 	@Override
 	public void deleteProductById(int productId) {
 		productRepository.deleteById(Integer.toString(productId));
 	}
-	
-	
+
 	/**
 	 * Helper Functions to build request/response objects.
 	 */
 	private Product createProductFromRequest(ProductRequest productRequest, Category category, Supplier supplier) {
-	    Product product = new Product();
-	    product.setCategory(category);
-	    product.setPrice(productRequest.getPrice());
-	    product.setProductName(productRequest.getProductName());
-	    product.setSupplier(supplier);
-	    product.setUnit(productRequest.getUnit());
-	    return product;
+		Product product = new Product();
+		product.setCategory(category);
+		product.setPrice(productRequest.getPrice());
+		product.setProductName(productRequest.getProductName());
+		product.setSupplier(supplier);
+		product.setUnit(productRequest.getUnit());
+		return product;
 	}
 
 	private ProductResponse mapProductToResponse(Product product) {
-	    ProductResponse productResponse = new ProductResponse();
-	    productResponse.setProductId(product.getProductID());
-	    productResponse.setName(product.getProductName());
-	    productResponse.setPrice(product.getPrice().toString());
-	    productResponse.setSupplier(product.getSupplier());
-	    productResponse.setCategory(product.getCategory());
-	    productResponse.setUnit(product.getUnit());
-	    return productResponse;
+		ProductResponse productResponse = new ProductResponse();
+		productResponse.setProductId(product.getProductID());
+		productResponse.setName(product.getProductName());
+		productResponse.setPrice(product.getPrice().toString());
+		productResponse.setSupplier(product.getSupplier());
+		productResponse.setCategory(product.getCategory());
+		productResponse.setUnit(product.getUnit());
+		return productResponse;
 	}
 
 }

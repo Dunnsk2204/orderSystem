@@ -61,7 +61,7 @@ public class OrderServiceImpl implements OrderService {
 		responseMap = new HashMap<>();
 
 		if (!order.isPresent()) {
-			responseMap.put("No order is available with the ID " + id, new OrderResponse());
+			responseMap.put("ERROR", new OrderResponse());
 			return responseMap;
 		}
 
@@ -187,7 +187,7 @@ public class OrderServiceImpl implements OrderService {
 		return null;
 	}
 
-	private OrderDetail saveOrderDetail(Order order, Product product, String quantity) {
+	public OrderDetail saveOrderDetail(Order order, Product product, String quantity) {
 		OrderDetail orderDetail = new OrderDetail();
 		orderDetail.setOrder(order);
 		orderDetail.setProduct(product);
